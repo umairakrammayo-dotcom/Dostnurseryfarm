@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dost Nursery Farm - Online Plants</title>
+<style>
+body{font-family:sans-serif;margin:0;background:#f0f4f0}
+header{background:#2E7D32;color:white;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100}
+.hamburger{font-size:26px;cursor:pointer;background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:6px}
+.search-box{padding:12px;background:white;display:flex;gap:8px;box-shadow:0 2px 5px rgba(0,0,0,0.1);position:sticky;top:56px;z-index:90}
+.search-box input{flex:1;padding:12px;border-radius:25px;border:1px solid #ccc;outline:none}
+.search-box button{padding:10px 14px;border-radius:20px;border:none;background:#2E7D32;color:white}
+#sideMenu{position:fixed;left:-280px;top:0;width:270px;height:100%;background:white;transition:0.3s;z-index:200;overflow-y:auto}
+#sideMenu.menu-head{background:#2E7D32;color:white;padding:20px 16px;font-weight:bold}
+#sideMenu div.item{padding:12px 20px;border-bottom:1px solid #eee;cursor:pointer}
+#sideMenu div.item:hover{background:#E8F5E9}
+#overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:150}
+.plant-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:12px;padding:12px}
+.card{background:white;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.08);position:relative}
+.card img{width:100%;height:165px;object-fit:cover}
+.card-body{padding:10px}
+.price{color:#2E7D32;font-weight:bold;font-size:18px}
+.badge{font-size:11px;background:#E8F5E9;padding:3px 7px;border-radius:12px;margin:2px;display:inline-block}
+.btn-cart{background:#2E7D32;color:white;border:none;width:100%;padding:10px;border-radius:8px;font-weight:bold;margin-top:8px;cursor:pointer}
+#cartBar{position:fixed;bottom:0;left:0;width:100%;background:white;padding:12px;box-shadow:0 -3px 15px rgba(0,0,0,0.2);display:none;z-index:300;border-radius:16px 16px 0 0}
+.cart-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #eee;font-size:14px}
+.pay-details{background:#FFF8E1;border:1px dashed #F9A825;padding:12px;border-radius:10px;margin-top:10px;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <div><b>🌿 Dost Nursery Farm</b></div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <div onclick="openCart()" style="cursor:pointer">🛒 <span id="cartCount">0</span></div>
+    <div class="hamburger" onclick="openMenu()">☰</div>
+  </div>
+</header>
+
+<div class="search-box">
+  <input id="searchInput" placeholder="Search plants - Rose, Mango, Money..." onkeyup="doSearch()">
+  <button onclick="doSearch()">🔍</button>
+</div>
+
+<div id="overlay" onclick="closeMenu();closeCart()"></div>
+
+<div id="sideMenu">
+  <div class="menu-head">🌿 Dost Nursery Farm<br><small style="font-weight:normal">Menu</small></div>
+  <div class="item" onclick="filterCat('All')">🏠 All Plants</div>
+  <div id="catList"></div>
+  <div class="item" style="background:#E3F2FD;margin-top:10px" onclick="window.open('https://maps.app.goo.gl/ZUqgb5RPfaZHV9MF9','_blank')">
+    📍 Get Directions<br><small>Open Google Maps</small>
+  </div>
+  <div class="item" onclick="window.open('https://wa.me/923061431926','_blank')">💬 Contact on WhatsApp</div>
+</div>
+
+<div class="plant-grid" id="plants">Loading plants from your Google Sheet...</div>
+
+<!-- CART / ORDER STAGE - Payment ONLY HERE -->
+<div id="cartBar">
+  <div style="display:flex;justify-content:space-between"><b>🛒 Your Cart (<span id="cartCount2">0</span>)</b><span onclick="closeCart()" style="cursor:pointer">✕</span></div>
+  <div id="cartItems" style="max-height:200px;overflow-y:auto;margin:10px 0"></div>
+  <div id="cartTotal" style="font-weight:bold;font-size:18px"></div>
+
+  <div class="pay-details">
+    <b>💳 Advance Payment - No COD</b><br>
+    Easypaisa: <b>03061431926</b> (M. Hussnain Saleem)<br>
+    JazzCash: <b>03061431926</b> (M. Hussnain Saleem)<br><br>
+    1. Pay total amount<br>2. Send screenshot on WhatsApp
+  </div>
+  <button style="width:100%;background:#25D366;color:white;border:none;padding:14px;border-radius:10px;font-weight:bold;font-size:16px;margin-top:10px" onclick="checkoutWA()">Order on WhatsApp →</button>
+</div>
+
+<!-- WhatsApp Floating -->
+<a href="https://wa.me/923061431926?text=Salam Dost Nursery Farm! I want to buy plants" style="position:fixed;bottom:85px;right:18px;background:#25D366;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;text-decoration:none;box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:99">💬</a>
+
+<script>
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTKt_vJhXUG5H5o5rSy33-DKN2v-QnGjXBNY3YTznFw2aSP0jgCPoSjkfTYNSDUM8EYGfmkR_dqSi70/pub?output=csv";
+let allPlants=[], cart=[];
+
+fetch(SHEET_URL).then(r=>r.text()).then(csv=>{
+  let rows=csv.split('\n').slice(1);
+  allPlants=rows.map(r=>{
+    let c=r.split(','); return {id:c[0],name:c[1],price:parseInt(c[2])||0,cat:c[3],age:c[4],height:c[5],pot:c[6],img:c[7],stock:c[8],desc:c[9]}
+  }).filter(p=>p.name);
+  let cats=[...new Set(allPlants.map(p=>p.cat).filter(Boolean))];
+  document.getElementById('catList').innerHTML=cats.map(c=>`<div class="item" onclick="filterCat('${c}')">🌱 ${c}</div>`).join('');
+  showPlants(allPlants);
+});
+
+function showPlants(list){
+  document.getElementById('plants').innerHTML=list.map(p=>`
+    <div class="card">
+      <img src="${p.img}" onerror="this.src='https://via.placeholder.com/300?text=${encodeURIComponent(p.name)}'">
+      <div class="card-body">
+        <b style="font-size:14px">${p.name}</b><br>
+        <span class="price">Rs.${p.price}</span><br>
+        <span class="badge">Age: ${p.age||'-'}</span>
+        <span class="badge">Ht: ${p.height||'-'}</span>
+        <span class="badge">Pot: ${p.pot||'-'}</span><br>
+        <small style="color:#666">${p.desc||''}</small><br>
+        ${p.stock.toLowerCase().includes('yes')?
+          `<button class="btn-cart" onclick="addToCart('${p.id}')">Add to Cart</button>` :
+          `<button style="background:#ccc;width:100%;padding:10px;border:none;border-radius:8px;margin-top:8px">Sold Out</button>`}
+      </div>
+    </div>`).join('');
+}
+function doSearch(){
+  let q=document.getElementById('searchInput').value.toLowerCase();
+  showPlants(allPlants.filter(p=>p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q)));
+}
+function filterCat(c){closeMenu(); if(c==='All') showPlants(allPlants); else showPlants(allPlants.filter(p=>p.cat===c));}
+function addToCart(id){
+  let p=allPlants.find(x=>x.id==id); cart.push(p); updateCart(); openCart();
+}
+function updateCart(){
+  document.getElementById('cartCount').innerText=cart.length;
+  document.getElementById('cartCount2').innerText=cart.length;
+  let total=cart.reduce((s,p)=>s+p.price,0);
+  document.getElementById('cartItems').innerHTML=cart.map((p,i)=>`<div class="cart-item"><span>${p.name} - Rs.${p.price}</span><span onclick="removeCart(${i})" style="color:red;cursor:pointer">✕</span></div>`).join('');
+  document.getElementById('cartTotal').innerText="Total: Rs."+total;
+  document.getElementById('cartBar').style.display=cart.length? 'block':'none';
+}
+function removeCart(i){cart.splice(i,1); updateCart(); if(!cart.length) closeCart();}
+function checkoutWA(){
+  let total=cart.reduce((s,p)=>s+p.price,0);
+  let list=cart.map(p=>`- ${p.name} (Age:${p.age} Height:${p.height} Pot:${p.pot}) Rs.${p.price}`).join('%0A');
+  let msg=`Salam Dost Nursery Farm!%0A%0AI want to order:%0A${list}%0A%0ATotal: Rs.${total}%0A%0AI have paid via Easypaisa/JazzCash 03061431926. Please confirm.`;
+  window.open(`https://wa.me/923061431926?text=${msg}`,'_blank');
+}
+function openMenu(){document.getElementById('sideMenu').style.left='0';document.getElementById('overlay').style.display='block'}
+function closeMenu(){document.getElementById('sideMenu').style.left='-280px';document.getElementById('overlay').style.display='none'}
+function openCart(){document.getElementById('cartBar').style.display='block';document.getElementById('overlay').style.display='block'}
+function closeCart(){document.getElementById('cartBar').style.display='none';document.getElementById('overlay').style.display='none'}
+</script>
+</body>
+</html>
